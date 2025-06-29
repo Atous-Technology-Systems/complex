@@ -19,13 +19,45 @@ public class SearchController {
 
     @PostMapping("/execute")
     public ResponseEntity<SearchResponse> executeGroverSearch(@RequestBody SearchRequest request) {
-        if (request.searchSpaceSize() <= 0 || request.targetIndex() >= request.searchSpaceSize()) {
-            return ResponseEntity.badRequest().body(new SearchResponse("Invalid input parameters.", null));
+        // Validações de entrada aprimoradas
+        String validationError = validateRequest(request);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(new SearchResponse(validationError, null));
         }
         
-        GroverResult result = searchUseCase.executeSearch(request.searchSpaceSize(), request.targetIndex());
+        try {
+            GroverResult result = searchUseCase.executeSearch(request.searchSpaceSize(), request.targetIndex());
+            
+            String message = result.success() ? 
+                "Search successful! Found target at index " + result.foundIndex() : 
+                "Search completed but target not found. Found index: " + result.foundIndex();
+                
+            return ResponseEntity.ok(new SearchResponse(message, result));
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(new SearchResponse("Internal error: " + e.getMessage(), null));
+        }
+    }
+    
+    private String validateRequest(SearchRequest request) {
+        if (request.searchSpaceSize() <= 0) {
+            return "Search space size must be positive, got: " + request.searchSpaceSize();
+        }
         
-        String message = result.success()? "Search successful!" : "Search failed to find the target.";
-        return ResponseEntity.ok(new SearchResponse(message, result));
+        if (request.searchSpaceSize() > 1_000_000) {
+            return "Search space size too large (max: 1,000,000), got: " + request.searchSpaceSize();
+        }
+        
+        if (request.targetIndex() < 0) {
+            return "Target index must be non-negative, got: " + request.targetIndex();
+        }
+        
+        if (request.targetIndex() >= request.searchSpaceSize()) {
+            return String.format("Target index (%d) must be less than search space size (%d)", 
+                request.targetIndex(), request.searchSpaceSize());
+        }
+        
+        return null; // Validação passou
     }
 } 

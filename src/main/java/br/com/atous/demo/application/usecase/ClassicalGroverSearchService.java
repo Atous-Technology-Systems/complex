@@ -18,12 +18,15 @@ public class ClassicalGroverSearchService implements QuantumSearchUseCase {
 
     @Override
     public GroverResult executeSearch(int searchSpaceSize, int targetIndex) {
+        validateInputs(searchSpaceSize, targetIndex);
+        
         long startTime = System.nanoTime();
 
         AmplitudeDataStructure amplitudes = amplitudeProvider.getObject();
         amplitudes.initialize(searchSpaceSize);
 
-        int iterations = (int) Math.floor(Math.PI / 4.0 * Math.sqrt(searchSpaceSize));
+        // Cálculo otimizado de iterações com tratamento de casos especiais
+        int iterations = calculateOptimalIterations(searchSpaceSize);
 
         for (int i = 0; i < iterations; i++) {
             amplitudes.applyOracle(targetIndex);
@@ -42,5 +45,48 @@ public class ClassicalGroverSearchService implements QuantumSearchUseCase {
             searchSpaceSize,
             iterations
         );
+    }
+    
+    private void validateInputs(int searchSpaceSize, int targetIndex) {
+        if (searchSpaceSize <= 0) {
+            throw new IllegalArgumentException("Search space size must be positive, got: " + searchSpaceSize);
+        }
+        
+        if (targetIndex < 0) {
+            throw new IllegalArgumentException("Target index must be non-negative, got: " + targetIndex);
+        }
+        
+        if (targetIndex >= searchSpaceSize) {
+            throw new IllegalArgumentException(
+                String.format("Target index (%d) must be less than search space size (%d)", 
+                    targetIndex, searchSpaceSize)
+            );
+        }
+    }
+    
+    /**
+     * Calcula o número ótimo de iterações para o algoritmo de Grover.
+     * 
+     * Teoria: O número ótimo de iterações é aproximadamente π/4 * √N
+     * 
+     * Para casos especiais:
+     * - N = 1: 0 iterações (resultado trivial)
+     * - N = 2,3: 1 iteração mínima
+     * - N ≥ 4: fórmula padrão π/4 * √N
+     */
+    private int calculateOptimalIterations(int searchSpaceSize) {
+        if (searchSpaceSize == 1) {
+            return 0; // Caso trivial: apenas um elemento
+        }
+        
+        if (searchSpaceSize <= 3) {
+            return 1; // Para espaços muito pequenos, pelo menos 1 iteração
+        }
+        
+        // Fórmula padrão de Grover: π/4 * √N
+        int calculated = (int) Math.floor(Math.PI / 4.0 * Math.sqrt(searchSpaceSize));
+        
+        // Garantia de pelo menos 1 iteração para evitar casos degenerados
+        return Math.max(1, calculated);
     }
 } 

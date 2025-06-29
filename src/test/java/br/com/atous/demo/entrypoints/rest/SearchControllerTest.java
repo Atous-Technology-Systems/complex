@@ -5,6 +5,7 @@ import br.com.atous.demo.domain.model.GroverResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,6 +20,7 @@ class SearchControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockBean
     private QuantumSearchUseCase searchUseCase;
 
     @Test
@@ -35,7 +37,7 @@ class SearchControllerTest {
                .contentType(MediaType.APPLICATION_JSON)
                .content(requestJson))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.message").value("Search successful!"))
+               .andExpect(jsonPath("$.message").value("Search successful! Found target at index 42"))
                .andExpect(jsonPath("$.result.foundIndex").value(target));
     }
 
@@ -47,7 +49,7 @@ class SearchControllerTest {
                .contentType(MediaType.APPLICATION_JSON)
                .content(requestJson))
                .andExpect(status().isBadRequest())
-               .andExpect(jsonPath("$.message").value("Invalid input parameters."));
+               .andExpect(jsonPath("$.message").value("Search space size must be positive, got: 0"));
     }
 
     @Test
@@ -58,7 +60,18 @@ class SearchControllerTest {
                .contentType(MediaType.APPLICATION_JSON)
                .content(requestJson))
                .andExpect(status().isBadRequest())
-               .andExpect(jsonPath("$.message").value("Invalid input parameters."));
+               .andExpect(jsonPath("$.message").value("Target index (10) must be less than search space size (10)"));
+    }
+
+    @Test
+    void whenPostNegativeTargetIndex_thenReturnsBadRequest() throws Exception {
+        String requestJson = "{\"searchSpaceSize\": 10, \"targetIndex\": -1}";
+
+        mockMvc.perform(post("/api/v1/search/execute")
+               .contentType(MediaType.APPLICATION_JSON)
+               .content(requestJson))
+               .andExpect(status().isBadRequest())
+               .andExpect(jsonPath("$.message").value("Target index must be non-negative, got: -1"));
     }
 
     @Test
@@ -76,7 +89,7 @@ class SearchControllerTest {
                .contentType(MediaType.APPLICATION_JSON)
                .content(requestJson))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.message").value("Search failed to find the target."))
+               .andExpect(jsonPath("$.message").value("Search completed but target not found. Found index: 15"))
                .andExpect(jsonPath("$.result.foundIndex").value(foundIndex))
                .andExpect(jsonPath("$.result.success").value(false));
     }
