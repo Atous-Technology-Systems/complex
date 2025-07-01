@@ -1,11 +1,11 @@
 I'm building software for free, to believe in a better world, if you have any value to help me to continue, please use this btc address to help me stay online
 btc wallet: bc1qruucqnqd6sm2ejqhst4ze446cg3v5qgu06xl4a
 
-# AetherBind: Quantum-Inspired Classical Grover Search
+# Complex: Quantum-Inspired Classical Grover Search
 
 ## Overview
 
-AetherBind is a Java-based software application that provides a classical simulation of the Grover search algorithm. While Grover's algorithm is a cornerstone of quantum computing, AetherBind demonstrates how advanced classical data structures and algorithmic optimizations can significantly improve the performance of such simulations on conventional hardware. The core innovation lies in achieving an `O(√N log N)` time complexity for the classical Grover search, a substantial improvement over naive `O(N√N)` implementations.
+Complex is a Java-based software application that provides a classical simulation of the Grover search algorithm. While Grover's algorithm is a cornerstone of quantum computing, AetherBind demonstrates how advanced classical data structures and algorithmic optimizations can significantly improve the performance of such simulations on conventional hardware. The core innovation lies in achieving an `O(√N log N)` time complexity for the classical Grover search, a substantial improvement over naive `O(N√N)` implementations.
 
 ## Features
 
