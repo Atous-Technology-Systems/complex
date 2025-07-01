@@ -1,3 +1,6 @@
+I'm building software for free, to believe in a better world, if you have any value to help me to continue, please use this btc address to help me stay online
+btc wallet: bc1qruucqnqd6sm2ejqhst4ze446cg3v5qgu06xl4a
+
 # AetherBind: Quantum-Inspired Classical Grover Search
 
 ## Overview
