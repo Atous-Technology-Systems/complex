@@ -3,6 +3,9 @@
 echo "🚀 DETAILED BENCHMARK - Quantum Search Algorithm"
 echo "================================================="
 
+# Arrays para armazenar os resultados para o resumo final
+declare -A results_summary
+
 # Função de benchmark melhorada
 benchmark_size() {
     local n=$1
@@ -21,12 +24,12 @@ benchmark_size() {
           -H "Content-Type: application/json" \
           -d "{\"searchSpaceSize\": $n, \"targetIndex\": $target}")
         
-        if echo "$result" | grep -q '"success":true'; then
+        if echo "$result" | grep -q '\"success\":true'; then
             successes=$((successes + 1))
             
             # Extrair dados
-            exec_time=$(echo "$result" | grep -o '"executionTimeMillis":[0-9]*' | cut -d':' -f2)
-            iterations=$(echo "$result" | grep -o '"iterations":[0-9]*' | cut -d':' -f2)
+            exec_time=$(echo "$result" | grep -o '\"executionTimeMillis\":[0-9]*' | cut -d':' -f2)
+            iterations=$(echo "$result" | grep -o '\"iterations\":[0-9]*' | cut -d':' -f2)
             
             if [ ! -z "$exec_time" ]; then times+=($exec_time); fi
             if [ ! -z "$iterations" ]; then total_iterations=$((total_iterations + iterations)); fi
@@ -56,17 +59,29 @@ benchmark_size() {
         theoretical_iterations=$(awk "BEGIN {printf \"%.0f\", 0.785 * sqrt($n)}")
         complexity_estimate=$(awk "BEGIN {printf \"%.0f\", sqrt($n) * log($n)/log(2)}")
         linear_ops=$((n / 2))  # Operações esperadas busca linear
-        speedup=$(awk "BEGIN {printf \"%.1f\", $linear_ops / $avg_iterations}")
+        
+        # Evitar divisão por zero para speedup e reduction
+        speedup="N/A"
+        reduction="N/A"
+        if [ "$avg_iterations" -ne 0 ]; then
+            speedup=$(awk "BEGIN {printf \"%.1f\", $linear_ops / $avg_iterations}")
+            reduction=$(awk "BEGIN {printf \"%.1f\", (1 - $avg_iterations / $linear_ops) * 100}")
+        fi
         
         echo "   ⏱️  Execution Time: min=${min_time}ms, avg=${avg_time}ms, max=${max_time}ms"
         echo "   🎯 Success Rate: $successes/10 (100%)"
         echo "   🔄 Iterations: actual=$avg_iterations, theoretical=$theoretical_iterations"
         echo "   🧮 Complexity: O(√N log N) ≈ O($complexity_estimate) operations"
         echo "   📈 Speedup vs Linear: ${speedup}x (linear would need ~$linear_ops operations)"
-        
-        # Análise da redução de complexidade
-        reduction=$(awk "BEGIN {printf \"%.1f\", (1 - $avg_iterations / $linear_ops) * 100}")
         echo "   🚀 Complexity Reduction: ${reduction}% compared to linear search"
+
+        # Armazenar resultados para o resumo final
+        results_summary[$n,avg_time]=$avg_time
+        results_summary[$n,avg_iterations]=$avg_iterations
+        results_summary[$n,complexity_estimate]=$complexity_estimate
+        results_summary[$n,speedup]=$speedup
+        results_summary[$n,reduction]=$reduction
+
     else
         echo "   ❌ No successful executions"
     fi
@@ -98,7 +113,7 @@ benchmark_size 1024
 benchmark_size 4096
 
 echo "🏁 BENCHMARK COMPLETE - ANALYSIS SUMMARY"
-echo "========================================"
+echo "========================================="
 echo
 echo "📈 PERFORMANCE VALIDATION:"
 echo "   ✅ Algorithm achieves O(√N log N) complexity as predicted"
@@ -106,11 +121,18 @@ echo "   ✅ Iterations match theoretical expectations (π/4 × √N)"
 echo "   ✅ Execution times remain low even for large N"
 echo "   ✅ 100% success rate across all test cases"
 echo
-echo "🎯 COMPLEXITY REDUCTION ACHIEVED:"
-echo "   • N=64:   ~84% reduction vs linear search"
-echo "   • N=256:  ~90% reduction vs linear search"  
-echo "   • N=1024: ~95% reduction vs linear search"
-echo "   • N=4096: ~97% reduction vs linear search"
+echo "📊 DETAILED RESULTS SUMMARY:"
+echo "| N    | Avg Time (ms) | Avg Iterations | Estimated O(√N log N) Ops | Speedup vs Linear | Reduction (%) |"
+echo "|------|---------------|----------------|---------------------------|-------------------|---------------|"
+for n in 64 256 1024 4096; do
+    printf "| %-4s | %-13s | %-14s | %-25s | %-17s | %-13s |\n" \
+        "$n" \
+        "${results_summary[$n,avg_time]}" \
+        "${results_summary[$n,avg_iterations]}" \
+        "${results_summary[$n,complexity_estimate]}" \
+        "${results_summary[$n,speedup]}" \
+        "${results_summary[$n,reduction]}"
+done
 echo
 echo "🔬 SCIENTIFIC VALIDATION:"
 echo "   • Quantum-inspired amplitude amplification ✅"

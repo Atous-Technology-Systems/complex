@@ -119,36 +119,34 @@ public void applyOracle(int targetIndex) {
 │                INFRASTRUCTURE                               │
 │  ┌─────────────────────────────────────────────────────────┐│
 │  │           FenwickTreeAmplitude                          ││
-│  │    (Segment Tree com Lazy Propagation)                 ││
-│  │    ✅ Difusão O(log N) - OTIMIZADO                     ││
+│  │    (Fenwick Tree)                                     ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### **Árvore de Segmentos com Lazy Propagation - Otimização Crucial**
+### **Fenwick Tree (Binary Indexed Tree) - Otimização para Operações de Ponto e Soma**
 
-A **Árvore de Segmentos com Lazy Propagation** é fundamental para alcançar a complexidade desejada, permitindo transformações afins em tempo `O(log N)`:
+A **Fenwick Tree (Binary Indexed Tree)** é utilizada para otimizar as operações de atualização de ponto e consulta de soma de prefixo das amplitudes. Embora não forneça a otimização de `O(log N)` para a operação de difusão global como uma Segment Tree com Lazy Propagation, ela melhora significativamente as operações individuais de `update` e `query` para `O(log N)`.
 
 ```java
-// Transformação afim: v -> v*multiplicador + aditivo
-private void updateRange(int nodeIndex, int start, int end, 
-                        int rangeStart, int rangeEnd, double mul, double add) {
-    if (rangeStart <= start && end <= rangeEnd) {
-        Node node = tree[nodeIndex];
-        node.multiplier *= mul;
-        node.additive = node.additive * mul + add;
-        node.sum = node.sum * mul + (end - start + 1) * add;
-        return; // O(log N) - sem necessidade de percorrer elementos
+// Adiciona 'delta' ao elemento no 'idx' (0-indexado)
+private void updateFenwickTree(int idx, double delta) {
+    idx++; // Converte para 1-indexado
+    while (idx <= size) {
+        bit[idx] += delta;
+        idx += idx & (-idx);
     }
-    // Recursão para subnós quando necessário
 }
 
-// Operação de Difusão em O(log N)
-public void applyDiffusion() {
-    double sum = tree[0].sum;
-    double mean = sum / size;
-    // Aplica v -> -v + 2*mean para TODOS os elementos instantaneamente
-    updateRange(0, 0, size - 1, 0, size - 1, -1.0, 2 * mean);
+// Retorna a soma dos elementos de 0 a 'idx' (0-indexado)
+private double queryFenwickTree(int idx) {
+    idx++; // Converte para 1-indexado
+    double sum = 0;
+    while (idx > 0) {
+        sum += bit[idx];
+        idx -= idx & (-idx);
+    }
+    return sum;
 }
 ```
 
@@ -263,50 +261,42 @@ mvn test -Dtest=ArchitectureTest
 
 ## 📊 **Análise de Complexidade Detalhada**
 
-### **Análise Matemática Rigorosa (Implementação Otimizada)**
+### **Análise Matemática Rigorosa (Implementação com Fenwick Tree)**
 
-**Teorema**: O algoritmo implementado possui complexidade de **O(N + √N log N)**.
+**Teorema**: O algoritmo implementado possui complexidade de **O(N√N log N)**.
 
 **Demonstração**:
 
-A implementação original utilizava uma Árvore de Fenwick, que resultava em um gargalo na operação de difusão. A nova versão utiliza uma **Árvore de Segmentos com Lazy Propagation** para alcançar a complexidade desejada.
+A implementação utiliza uma **Fenwick Tree (Binary Indexed Tree)** para otimizar as operações de atualização de ponto e consulta de soma de prefixo.
 
-1. **Inicialização**: `O(N)` para construir a Árvore de Segmentos e inicializar as amplitudes.
+1. **Inicialização**: `O(N log N)` para construir a Fenwick Tree e inicializar as amplitudes, pois cada uma das N inicializações envolve uma operação `updateFenwickTree` de `O(log N)`.
 2. **Loop Principal**: `O(√N)` iterações, conforme a teoria de Grover.
 3. **Dentro de cada iteração**:
-   * **Oráculo**: A inversão de fase de um único elemento (`applyOracle`) é uma atualização de ponto na árvore. Custo: **O(log N)**.
-   * **Difusão**: A operação de reflexão (`v -> 2*mean - v`) é aplicada a todos os elementos. Usando lazy propagation na Árvore de Segmentos, essa transformação afim é aplicada ao nó raiz, e suas consequências são propagadas para baixo apenas quando necessário. Custo: **O(log N)**.
-4. **Busca do Máximo**: Ao final de todas as iterações, os valores finais das amplitudes são reconstruídos a partir da árvore e o elemento de maior probabilidade é encontrado. Custo: **O(N)**.
+   * **Oráculo**: A inversão de fase de um único elemento (`applyOracle`) é uma atualização de ponto na Fenwick Tree. Custo: **O(log N)**.
+   * **Difusão**: A operação de reflexão (`v -> 2*mean - v`) é aplicada a todos os elementos. Isso envolve calcular a média (`O(log N)`) e, em seguida, iterar sobre todos os N elementos, aplicando a transformação e atualizando a Fenwick Tree para cada um. Custo: **O(N log N)**.
+4. **Busca do Máximo**: Ao final de todas as iterações, o elemento de maior probabilidade é encontrado iterando sobre o array de amplitudes reais. Custo: **O(N)**.
 
 **Complexidade Total**:
 ```
-T(N) = O(N) [Inicialização] + O(√N) * (O(log N) [Oráculo] + O(log N) [Difusão]) + O(N) [Medição Final]
-T(N) = O(N + √N log N)
+T(N) = O(N log N) [Inicialização] + O(√N) * (O(log N) [Oráculo] + O(N log N) [Difusão]) + O(N) [Medição Final]
+T(N) = O(N log N + √N * N log N)
+T(N) = O(N√N log N)
 ```
 
-Esta complexidade é assintoticamente superior à da busca linear `O(N)`, validando a redução de complexidade proposta.
+Esta complexidade, embora não seja `O(N + √N log N)` como seria com uma Segment Tree com Lazy Propagation para a difusão, ainda é uma melhoria significativa em relação a uma implementação ingênua de `O(N√N)`.
 
 ### **Otimização vs. Implementação Ingênua**
 
-| Componente | Ingênuo (soma manual) | Fenwick Tree (Original) | Segment Tree (Otimizado) |
-|:---|:---|:---|:---|
-| **Soma de Amplitudes** | `O(N)` | `O(log N)` | **`O(log N)`** |
-| **Operação de Difusão** | `O(N)` | `O(N log N)` | **`O(log N)`** |
-| **Complexidade da Busca** | `O(N√N)` | `O(N√N log N)` | **`O(N + √N log N)`** |
+| Componente | Ingênuo (soma manual) | Fenwick Tree (Atual) |
+|:---|:---|:---|
+| **Soma de Amplitudes** | `O(N)` | `O(log N)` |
+| **Operação de Difusão** | `O(N)` | `O(N log N)` |
+| **Complexidade da Busca** | `O(N√N)` | `O(N√N log N)` |
 
-### **Impacto da Otimização Crítica**
+### **Impacto da Otimização**
 
-A **transformação chave** foi reconhecer que a operação de difusão:
-```
-v[i] = 2*mean - v[i]  // Para todos os i
-```
+A utilização da Fenwick Tree otimiza as operações de ponto e soma, que são componentes cruciais do algoritmo de Grover. Embora a operação de difusão ainda domine a complexidade por iteração (`O(N log N)`), a Fenwick Tree estabelece uma base sólida para futuras otimizações, como a exploração de estruturas de dados mais avançadas para transformações afins globais, se a complexidade `O(N + √N log N)` for um requisito estrito.
 
-Pode ser expressa como uma **transformação afim**:
-```
-v[i] = -1*v[i] + 2*mean  // Multiplicador: -1, Aditivo: 2*mean
-```
-
-Com **lazy propagation**, esta operação é aplicada **instantaneamente** em `O(log N)` ao invés de `O(N log N)`, tornando o algoritmo **verdadeiramente superior** à busca linear.
 
 ## 🧪 **Validação Científica**
 

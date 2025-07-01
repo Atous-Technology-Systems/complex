@@ -7,41 +7,45 @@ import org.springframework.stereotype.Component;
 /**
  * IMPLEMENTAÇÃO CORRIGIDA - ALGORITMO DE GROVER CLÁSSICO
  * 
- * Esta implementação foi corrigida para resolver os problemas matemáticos críticos
- * identificados na versão anterior:
+ * Esta implementação foi refatorada para utilizar uma Fenwick Tree (Binary Indexed Tree)
+ * para otimizar as operações de soma e atualização de amplitudes.
  * 
  * CORREÇÕES APLICADAS:
- * 1. ✅ Operação de Difusão Correta: v_new = 2*mean - v_old
- * 2. ✅ Implementação Simplificada: Array simples ao invés de Segment Tree complexa
- * 3. ✅ Performance Otimizada: O(√N log N) total complexity mantida
- * 4. ✅ Validações de Entrada: Parâmetros validados corretamente
+ * 1. ✅ Fenwick Tree real implementada para `update` e `query_sum`.
+ * 2. ✅ Operação de Difusão Correta: v_new = 2*mean - v_old.
+ * 3. ✅ Validações de Entrada: Parâmetros validados corretamente.
  * 
- * COMPLEXIDADE ALGORÍTMICA:
- * - initialize(): O(N)
- * - applyOracle(): O(1)
- * - applyDiffusion(): O(N) - necessário para calcular a média
- * - findMaxAmplitudeIndex(): O(N)
- * - Total para Grover: O(N + √N * N) = O(N√N) ≈ O(N^1.5)
+ * COMPLEXIDADE ALGORÍTMICA (com Fenwick Tree):
+ * - initialize(): O(N log N)
+ * - applyOracle(): O(log N)
+ * - applyDiffusion(): O(N log N) - Iteração sobre N elementos, cada um com update O(log N)
+ * - findMaxAmplitudeIndex(): O(N) - Iteração sobre actualAmplitudes
+ * - Total para Grover: O(N log N + √N * (log N + N log N)) = O(N√N log N)
  * 
- * NOTA: Mantivemos o nome da classe para compatibilidade com Spring DI.
+ * NOTA: A otimização da difusão para O(log N) (conforme sugerido no pseudocódigo do PDF)
+ * exigiria uma Fenwick Tree mais avançada ou uma abordagem diferente para transformações
+ * afins globais, o que não é trivial e será considerado em etapas futuras, se necessário.
  */
 @Component
 @Scope("prototype")
 public class FenwickTreeAmplitude implements AmplitudeDataStructure {
 
-    private double[] amplitudes;
+    private double[] bit; // Fenwick Tree array (1-indexed)
+    private double[] actualAmplitudes; // Stores actual amplitude values (0-indexed)
     private int size;
 
     @Override
     public void initialize(int size) {
         validateSize(size);
         this.size = size;
-        this.amplitudes = new double[size];
+        this.bit = new double[size + 1]; // Fenwick Tree is 1-indexed
+        this.actualAmplitudes = new double[size];
         
         // Inicialização com superposição uniforme: |ψ⟩ = (1/√N) Σ|i⟩
         double initialAmplitude = 1.0 / Math.sqrt(size);
         for (int i = 0; i < size; i++) {
-            amplitudes[i] = initialAmplitude;
+            actualAmplitudes[i] = initialAmplitude;
+            updateFenwickTree(i, initialAmplitude); // Initialize Fenwick Tree
         }
     }
 
@@ -51,7 +55,12 @@ public class FenwickTreeAmplitude implements AmplitudeDataStructure {
         
         // Oracle: inverte a fase do elemento alvo
         // |target⟩ → -|target⟩
-        amplitudes[targetIndex] = -amplitudes[targetIndex];
+        double oldAmplitude = actualAmplitudes[targetIndex];
+        double newAmplitude = -oldAmplitude;
+        double delta = newAmplitude - oldAmplitude;
+
+        actualAmplitudes[targetIndex] = newAmplitude;
+        updateFenwickTree(targetIndex, delta);
     }
 
     @Override
@@ -63,31 +72,36 @@ public class FenwickTreeAmplitude implements AmplitudeDataStructure {
         //
         // Efeito: v_new = 2*mean - v_old
         
-        // 1. Calcula a média das amplitudes
-        double sum = 0.0;
-        for (double amplitude : amplitudes) {
-            sum += amplitude;
-        }
-        double mean = sum / size;
+        // 1. Calcula a média das amplitudes usando a Fenwick Tree (O(log N))
+        double totalSum = queryFenwickTree(size - 1);
+        double mean = totalSum / size;
         
         // 2. Aplica a transformação de difusão: v_new = 2*mean - v_old
+        // Esta etapa é O(N log N) pois itera sobre todos os N elementos
+        // e cada atualização na Fenwick Tree é O(log N).
         for (int i = 0; i < size; i++) {
-            amplitudes[i] = 2.0 * mean - amplitudes[i];
+            double oldAmplitude = actualAmplitudes[i];
+            double newAmplitude = 2.0 * mean - oldAmplitude;
+            double delta = newAmplitude - oldAmplitude;
+
+            actualAmplitudes[i] = newAmplitude;
+            updateFenwickTree(i, delta);
         }
     }
 
     @Override
     public int findMaxAmplitudeIndex() {
-        if (amplitudes == null) {
+        if (actualAmplitudes == null) {
             throw new IllegalStateException("Amplitudes not initialized");
         }
         
         int maxIndex = 0;
-        double maxProbability = amplitudes[0] * amplitudes[0];
+        double maxProbability = actualAmplitudes[0] * actualAmplitudes[0];
         
         // Encontra o índice com maior probabilidade |amplitude|²
+        // Esta operação é O(N)
         for (int i = 1; i < size; i++) {
-            double probability = amplitudes[i] * amplitudes[i];
+            double probability = actualAmplitudes[i] * actualAmplitudes[i];
             if (probability > maxProbability) {
                 maxProbability = probability;
                 maxIndex = i;
@@ -96,6 +110,30 @@ public class FenwickTreeAmplitude implements AmplitudeDataStructure {
         
         return maxIndex;
     }
+    
+    // --- Fenwick Tree (BIT) Helper Methods ---
+    
+    // Adds 'delta' to the element at 'idx' (0-indexed)
+    private void updateFenwickTree(int idx, double delta) {
+        idx++; // Convert to 1-indexed
+        while (idx <= size) {
+            bit[idx] += delta;
+            idx += idx & (-idx);
+        }
+    }
+
+    // Returns the sum of elements from 0 to 'idx' (0-indexed)
+    private double queryFenwickTree(int idx) {
+        idx++; // Convert to 1-indexed
+        double sum = 0;
+        while (idx > 0) {
+            sum += bit[idx];
+            idx -= idx & (-idx);
+        }
+        return sum;
+    }
+    
+    // --- Validation Methods ---
     
     private void validateSize(int size) {
         if (size <= 0) {
@@ -114,15 +152,15 @@ public class FenwickTreeAmplitude implements AmplitudeDataStructure {
         }
     }
     
-    // Método auxiliar para debugging (não usado em produção)
+    // --- Auxiliary Methods (for debugging/testing) ---
+    
     public double[] getAmplitudes() {
-        return amplitudes.clone();
+        return actualAmplitudes.clone();
     }
     
-    // Método auxiliar para calcular a probabilidade total (deve ser ≈ 1.0)
     public double getTotalProbability() {
         double total = 0.0;
-        for (double amplitude : amplitudes) {
+        for (double amplitude : actualAmplitudes) {
             total += amplitude * amplitude;
         }
         return total;
