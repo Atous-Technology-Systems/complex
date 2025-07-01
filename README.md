@@ -93,10 +93,8 @@ This command will compile the source code, run tests, and package the applicatio
 
 ### Running the Application
 
-YouThe application can be run directly from the command line:
-
 ```bash
-java -jar target/demo-0.0.1-SNAPSHOT.jar
+mvn spring-boot:run
 ```
 
 Upon startup, a basic demonstration of the Grover search algorithm will be executed via the `AlgorithmRunner` CLI entrypoint, printing the results to the console.
@@ -115,4 +113,4 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License And GNU License.
