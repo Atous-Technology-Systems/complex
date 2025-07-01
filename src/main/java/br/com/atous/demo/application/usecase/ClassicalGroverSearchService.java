@@ -23,6 +23,12 @@ public class ClassicalGroverSearchService implements QuantumSearchUseCase {
         long startTime = System.nanoTime();
 
         AmplitudeDataStructure amplitudes = amplitudeProvider.getObject();
+        // Ensure the correct implementation is used based on configuration or explicit choice
+        // For now, we assume SegmentTreeAmplitude is the desired implementation.
+        // In a real application, this might be managed by Spring profiles or a factory.
+        if (!(amplitudes instanceof br.com.atous.demo.infrastructure.datastructure.SegmentTreeAmplitude)) {
+            throw new IllegalStateException("Expected SegmentTreeAmplitude, but received a different implementation.");
+        }
         amplitudes.initialize(searchSpaceSize);
 
         // Cálculo otimizado de iterações com tratamento de casos especiais
