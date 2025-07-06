@@ -1,8 +1,6 @@
 This research, conducted independently by the **Atous** group, represents thousands of hours of dedication to a smarter, more sustainable future. If you believe in our mission, please consider supporting our future research and development.
 
-BTC Wallet Address:
-
-bc1qruucqnqd6sm2ejqhst4ze446cg3v5qgu06xl4a
+BTC Wallet Address: bc1qruucqnqd6sm2ejqhst4ze446cg3v5qgu06xl4a
 
 ETH Wallet Address: 0x4F9C709F45F8789b5db200b731a37477AB57557c
 
